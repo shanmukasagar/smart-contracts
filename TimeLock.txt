@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+contract LockAndTimeLockFund {
+    // Address of the contract owner
+    address public owner;
+
+    // Mapping to track locked funds for each user
+    mapping(address => uint256) public lockedFunds;
+
+    // Mapping to track timelocked funds for each user
+    mapping(address => uint256) public timelockedFunds;
+
+    // Mapping to track the release time for timelocked funds for each user
+    mapping(address => uint256) public releaseTime;
+
+    // Constructor sets the owner of the contract to the deployer
+    constructor() {
+        owner = msg.sender;
+    }
+
+    //lock funds
+    function lockFunds() public payable{
+        require(msg.value > 0, "Amount greater than zero");
+        lockedFunds[msg.sender] += msg.value;
+    }
+
+    // Function to withdraw locked funds, only the owner can release them
+    function releaseFunds(address _user) public {
+        require(msg.sender == owner, "Only the owner can release funds");
+        uint256 amount = lockedFunds[_user];
+        require(amount > 0, "No funds to release");
+
+        lockedFunds[_user] = 0; // Reset the user's locked funds
+        payable(_user).transfer(amount); // Transfer the locked funds to the user
+    }
+
+    // Function to time lock funds with a specific release time
+    function timeLockFunds(uint256 _time) public payable {
+        require(msg.value > 0, "Must send some ether to timelock");
+        require(_time > block.timestamp, "Release time must be in the future");
+
+        timelockedFunds[msg.sender] += msg.value;
+        releaseTime[msg.sender] = _time; // Set the release time for the user
+    }
+
+    // Function to withdraw timelocked funds after the release time has passed
+    function withdrawTimeLockedFunds() public {
+        uint256 amount = timelockedFunds[msg.sender];
+        require(amount > 0, "No funds to withdraw");
+        require(block.timestamp >= releaseTime[msg.sender], "Funds are still timelocked");
+
+        timelockedFunds[msg.sender] = 0; // Reset the user's timelocked funds
+        releaseTime[msg.sender] = 0; // Reset the release time
+        payable(msg.sender).transfer(amount); // Transfer the timelocked funds to the user
+    }
+
+    // Fallback function to receive Ether (just in case)
+    receive() external payable {}
+
+}

@@ -1,0 +1,82 @@
+// SPDX-License-Identifier : MIT
+pragma solidity ^0.8.0;
+contract StockTrading {
+
+    //Variables
+    address owner;
+    uint256 public totalShares;
+    mapping(address => uint256) public shareBalances;
+    uint256 public sharePrice;
+    mapping(address => uint256) public etherBalances;
+    uint256 totalTrades;
+
+    //Functions
+    constructor() {
+        owner = msg.sender;
+    }
+
+    //Buy shares
+    function buyShares(uint256 reqShares) public payable{
+        require(totalShares >= reqShares, "Not available shares");
+        require(msg.value >= reqShares * sharePrice, "Insufficent ether sent");
+        shareBalances[msg.sender] += reqShares;
+        totalShares -= reqShares;
+    }
+
+    //Sell shares
+    function sellShares(uint256 reqShares) public{
+        require(shareBalances[msg.sender] >= reqShares, "Insufficient shares to sell" );
+        totalShares += reqShares;
+        uint256 amount = reqShares * sharePrice;
+        shareBalances[address(this)] += reqShares;
+        payable(msg.sender).transfer(amount);
+        shareBalances[msg.sender] -= reqShares;
+    }
+
+    //Transfer shares
+    function transferShares(address to, uint256 reqShares) public {
+        require(shareBalances[msg.sender] >= reqShares, "Insufficient shares to transfer" );
+        // Prevent transferring shares to the zero address
+        require(to != address(0), "Cannot transfer to zero address");
+        // Prevent transferring shares to oneself
+        require(to != msg.sender, "Cannot transfer shares to yourself");
+        shareBalances[to] += reqShares;
+        shareBalances[msg.sender] -= reqShares;
+    }
+
+    //Change share price
+    function setSharePrice(uint256 _price) public {
+        require(msg.sender == owner, "Invalid user");
+        require(_price > 0, "Price must be greater than zero");
+        sharePrice = _price;
+    }
+
+    //withdraw ether
+    function withdrawEther(uint256 _amount) public {
+        // Only the owner can withdraw Ether
+        require(msg.sender == owner, "You are not authorized to withdraw");
+
+        // Ensure the contract has enough Ether to withdraw
+        require(address(this).balance >= _amount, "Insufficient contract balance");
+
+        // Transfer the requested amount to the owner
+        payable(msg.sender).transfer(_amount);
+    }
+
+    //get current share price
+    function getSharePrice() public view returns(uint256){
+        return sharePrice;
+    }
+
+    //Increase shares
+    function issueShares(uint256 shares) public {
+        totalShares += shares;
+    }
+
+    //Decrease shares
+    function burnShares(uint256 shares) public {
+        require(totalShares >= shares, "Insufficient shares to burn");
+        totalShares -= shares;
+    }
+
+}

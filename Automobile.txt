@@ -1,0 +1,46 @@
+// SPDX-License-Identifier:MIT
+
+pragma solidity ^0.8.0;
+contract Automobile{
+
+    //Structures
+    struct Buyer{
+        address buyerAddress;
+        bool isBuy;
+    }
+
+    //Variables
+    uint256 public price;
+    address public owner;
+    mapping(address => bool) public buyers;
+    string public vehicleModel;
+    string public vehicleMake;
+    Buyer[] public people;
+
+    event vehicleBuy(address buyer, string _make, string _model);
+
+    //Functions
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function purchaseVehicle(string memory _make, string memory _model) public payable{
+        require(msg.value >= price, "Vehicle is low ");
+        require(buyers[msg.sender] == false, "Already buy this vehicle");
+        vehicleMake = _make;
+        vehicleModel = _model;
+        buyers[msg.sender] = true;
+        emit vehicleBuy(msg.sender, _make, _model);
+    }
+
+    function setPrice(uint256 amount) external {
+        require(msg.sender == owner, "Only owner can change the price for the vehicle");
+        price = amount;
+    }
+
+    function getVehicleOwner() public view returns(bool){
+        return buyers[msg.sender];
+    }
+
+}

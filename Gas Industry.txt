@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+contract GasIndustry{
+
+    //Variables
+    address public owner;
+    struct Operator{
+        uint256 allocatedResources;
+        uint256 extractedResources;
+    }
+    mapping(address => Operator) public operators;
+    struct ProductionReport {
+        uint256 totalExtracted;
+        uint256 reportDate;          // Timestamp of the report submission
+        bool isApproved;
+    }
+    mapping(uint256 => ProductionReport) public reports;
+    uint256 royalityPercentage = 10;
+    uint256 totalRoyalitiesPaid;
+    uint256 reportCount;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    //Register new operator by owner of the contract
+    function registerOperator(address _operator, uint256 resources) public {
+        require(msg.sender == owner, "Invalid owner");
+        operators[_operator].allocatedResources = resources;
+    }
+
+    //Update resource allocation by owner of the contract
+    function setResourceAllocation(address _operator, uint256 resources) public {
+        require(msg.sender == owner, "Invalid owner");
+        require(operators[_operator].allocatedResources > 0, "Operator not registered");
+        operators[_operator].allocatedResources = resources;
+    }
+
+    //Production Report
+    function productionReportDetails(uint256 _extractedAmount) public {
+        require(operators[msg.sender].allocatedResources > 0, "Operator not registered");
+        require(operators[msg.sender].allocatedResources > _extractedAmount, "Extrated Limit exceeded");
+        reportCount++;
+        reports[reportCount] = ProductionReport({
+            totalExtracted : _extractedAmount,
+            reportDate : block.timestamp,
+            isApproved : false
+        });
+        operators[msg.sender].allocatedResources -= _extractedAmount;
+        operators[msg.sender].extractedResources += _extractedAmount;
+    }
+
+    //Approve production report
+    function approvedProductionReport(uint256 reportId) public {
+        require(msg.sender == owner, "Invalid user");
+        require(reports[reportId].totalExtracted > 0, "Report is not registered");
+        reports[reportId].isApproved = true;
+    }
+
+    //Calculate Royalities
+    function calculateRoyalities(uint256 _extractedAmount) public view returns(uint256) {
+        return (_extractedAmount * royalityPercentage) / 100;
+    }
+
+    function payRoyalties(uint256 _extractedAmount) public payable {
+        uint256 royalties = calculateRoyalities(_extractedAmount);
+        require(msg.value >= royalties, "Insufficient royalty payment");
+        totalRoyalitiesPaid += royalties;  // Update total royalties paid
+    }
+}

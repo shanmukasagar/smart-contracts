@@ -1,0 +1,81 @@
+// SPDX-License-Identifier:MIT
+pragma solidity ^0.8.2;
+contract TravelIndustry{
+    //Variables
+    address public owner;
+    struct Booking{
+        address customer;
+        uint256 serviceId;
+        uint256 totalBookings;
+        uint256 totalCost;
+        bool isComfirmed;
+    }
+    struct Service{
+        string name;
+        uint256 price;
+        uint256 available;
+    }
+    mapping(uint256 => Service) public services;
+    mapping(uint256 => Booking) public bookings;
+    uint256 public serviceCount;
+    uint256 public bookingCount;
+
+    //Functions
+    constructor() {
+        owner = msg.sender;
+    }
+
+    //Add service
+    function addService(string memory _name, uint256 _price, uint256 _available ) public {
+        require(msg.sender == owner, "Invalid owner");
+        serviceCount += 1;
+        services[serviceCount] = Service({
+            name : _name, 
+            price : _price,
+            available : _available
+        });
+    }
+
+    //Book service
+    function bookService(uint256 serviceId, uint256 quantity) public payable{
+        require(quantity > 0, "Invalid quantity number passed");
+        
+        Service memory service = services[serviceId];
+        require(service.available >= quantity, "Not enough availability");
+        require(msg.value == service.price * quantity, "Incorrect payment");
+
+        service.available -= quantity;
+
+        bookingCount += 1;
+        bookings[bookingCount] = Booking({
+            customer : msg.sender,
+            serviceId : serviceId,
+            totalBookings : quantity,
+            totalCost : quantity * service.price,
+            isComfirmed : false
+        });
+    }
+
+    //Conform booking
+    function conformBooking(uint256 _bookingId) public {
+        require(msg.sender == owner, "Invalid User");
+        Booking memory booking = bookings[_bookingId];
+        require(booking.isComfirmed == false, "Booking already confirmed");
+        booking.isComfirmed = true;
+    }
+
+    //Cancel booking
+    function cancelBooking(uint256 _bookingId) public {
+        Booking memory booking = bookings[_bookingId];
+        require(msg.sender == owner || msg.sender == booking.customer, "Only owner or customer cancel the booking");
+        require(booking.isComfirmed == false, "booking is not conformed so need to cancel the ticket");
+        payable(booking.customer).transfer(booking.totalCost);
+        delete bookings[_bookingId];
+    }
+
+    //Withdraw funds
+    function withDrawFunds() public {
+        require(msg.sender == owner, "Invalid User");
+        payable(owner).transfer(address(this).balance);
+    }
+ }

@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+contract Insurance{
+    //Variables
+    address owner;
+    struct Policy{
+        address policyholder;
+        uint256 premium;
+        uint256 coverageAmount;
+        uint256 validUntil;
+        bool isActive;
+    }
+    mapping(uint256 => Policy) public policies; // Store policies with unique id
+    uint256 public policyCount;// No of poicies issued
+    struct Claim {
+        uint256 policyId;
+        uint256 claimAmount;
+        bool isApproved;
+    }
+    mapping(uint256 => Claim) public claims;
+    uint256 public claimCount;
+    uint256 public premiumAmount;
+    uint256 public totalClaimsPaid;
+
+    //Functions
+    constructor() {
+        owner = msg.sender;
+    }
+
+    //Create policy
+    function createPolicy(address _policyHolder, uint256 _coverageAmount) public payable{
+        require(msg.value == premiumAmount, "Insuffiecient funds");
+        policyCount++;
+        policies[policyCount] = Policy({
+            policyholder : _policyHolder,
+            premium : premiumAmount,
+            coverageAmount : _coverageAmount,
+            validUntil : block.timestamp + 365 days,
+            isActive : true
+        });
+    }
+
+    //File claim fo insurance
+    function fileClaim(uint256 _id, uint256 amount) public{
+        Policy memory policy = policies[_id];
+
+        require(policy.policyholder == msg.sender, "Invalid User");
+        require(policy.coverageAmount >= amount, "claim amountgreater than coverage amount");
+        require(policy.isActive, "policy is not active");
+
+        claimCount++;
+        claims[claimCount] = Claim({
+            policyId : _id,
+            claimAmount : amount,
+            isApproved : false
+        });
+    }
+
+    //Approve claim
+    function approveClaim(uint256 _claimId) public view{
+        require(msg.sender == owner, "Invalid owner");
+        Claim memory claim = claims[_claimId];
+        require(claim.claimAmount > 0, "Claim doennot exist");
+        claim.isApproved = true;
+    }
+
+    //Payclaim
+    function payClaim(uint256 _claimId) public payable{
+        Claim memory claim = claims[_claimId];
+        require(claim.isApproved, "Claim is not approved");
+        require(address(this).balance >= claim.claimAmount, "Insufficient balance to pay claim");
+        Policy memory policy = policies[claim.policyId];
+        payable(policy.policyholder).transfer(claim.claimAmount);
+        totalClaimsPaid += claim.claimAmount;
+    }
+}

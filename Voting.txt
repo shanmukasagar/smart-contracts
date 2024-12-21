@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.2;
+
+contract Voting {
+    address public admin;
+    mapping(address => bool) public hasVoted;
+    uint256 public totalVotes;
+    mapping(uint256 => uint256) public parties;
+    uint256[] public partyIds;
+
+    event VoteCast(address indexed voter, uint256 partyId);
+
+    constructor() {
+        totalVotes = 0;
+        admin = msg.sender;
+        for (uint256 i = 1; i <= 9; i++) {
+            parties[i] = 0; // Initialize all parties with 0 votes
+            partyIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        }
+    }
+
+    function castVote(uint256 id) public {
+        require(!hasVoted[msg.sender], "User already voted");
+        require(id >= 1 && id <= 9, "Invalid party ID"); // Ensure valid party ID
+
+        hasVoted[msg.sender] = true;
+        totalVotes += 1;
+        parties[id] += 1;
+        emit VoteCast(msg.sender, id);
+    }
+
+    // function getAllParties() public view returns (uint256[] memory, uint256[] memory) {
+    //     uint256[] memory votes;
+    //     for(uint256 id = 0; id < partyIds.length; id++) {
+    //         uint256 count = parties[partyIds[id]];
+    //         votes.push(count);
+
+    //     }
+    //     return(votes, partyIds);
+
+        
+    // }
+}
